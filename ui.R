@@ -33,23 +33,37 @@ body <- dashboardBody(
             10,
             fluidRow(
               column(2),
-              column(
-                4,
+              column(4,
                 fileInput(
                   "upload_file",
                   "Upload PDF",
                   width = "400px"
                 )
               ),
-              column(
-                6,
-                hidden(
-                  p(class = "warnbadge", id = "nohit", "No Hits")
-                ),
-                shinyBS::bsAlert("success_note")
+              column(4,
+                helpText(
+                  HTML(
+                    "The PDF must have embedded text. If an 'image' PDF, please
+                    use optical character recognition (OCR) software or
+                    <a href='https://cci-dev.org/shiny/closed/PDF_OCR/'
+                    target='_blank'>try Defenders' OCR app</a>.")
+                )
               )
             ),
             fluidRow(hr(class="style-four")),
+            fluidRow(
+              shinyBS::bsAlert("success_note")
+            ),
+            fluidRow(
+              column(8,
+                helpText(
+                  "Please include as much data as possible. We will process the
+                  document with various programs to extract additional structured
+                  data, but manually entered data can help humans search for
+                  documents using human-recognized patterns."
+                )
+              )
+            ),
             fluidRow(
               br(),
               column(

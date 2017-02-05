@@ -21,6 +21,15 @@ shinyServer(function(input, output) {
 
   observe(print(file_info()))
 
+  get_raw_text <- function(f) {
+    with_text <- try(pdf_text(f), silent = TRUE)
+    if(class(with_text) == "try-error") {
+      return(warning("No text layer or not a PDF."))
+    } else {
+      return(paste(with_text, collapse = " "))
+    }
+  }
+
   # Check that required data is OK
   validate_data <- function() {
     types = c("candidate", "conserv_agmt", "consultation",
@@ -33,6 +42,18 @@ shinyServer(function(input, output) {
       is_pdf <- try(pdf_info(file_info()$datapath), silent = TRUE)
       if(class(is_pdf) == "try-error") {
         return(FALSE)
+      }
+      with_text <- try(pdf_text(file_info()$datapath), silent = TRUE)
+      if(class(with_text) == "try-error") {
+        return(FALSE)
+      } else {
+        # A hack to try to detect whether there is a text layer; some docs
+        # may be OK but may fail this check (e.g., a map with just a few words)
+        tokenized <- unlist(str_split(paste(with_text, collapse = " "), " "))
+        tokenized <- tokenized[tokenized != ""]
+        if(length(tokenized) < 10) {
+          return(FALSE)
+        }
       }
       if(nchar(input$in_title) < 16 | nchar(input$in_title) > 256) {
         return(FALSE)
@@ -176,8 +197,13 @@ shinyServer(function(input, output) {
           ),
           tags$ul(
             span(style="font-style:italic; font-weight:bold;",
+                 "The PDF doesn't have embedded text."),
+            "We only accept PDFs with selectable at this time."
+          ),
+          tags$ul(
+            span(style="font-style:italic; font-weight:bold;",
                  "The title is too short or too long."),
-            "Title lengths should only be 16-256 characters."
+            "Title lengths should be 16-256 characters."
           ),
           tags$ul(
             span(style="font-style:italic; font-weight:bold;",
@@ -187,7 +213,7 @@ shinyServer(function(input, output) {
           tags$ul(
             span(style="font-style:italic; font-weight:bold;",
                  "The document type is not selected."),
-            "A non-'Select one' data type must be selected."
+            "A non-'Select one' document type must be selected."
           ),
           p("Please correct the error and re-try your submission.")
         ),

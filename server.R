@@ -10,7 +10,7 @@ rand_str <- function(len=30) {
   )
 }
 
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
 
   file_info <- reactive({
     if(!is.null(input$upload_file)) {
@@ -20,15 +20,6 @@ shinyServer(function(input, output) {
   })
 
   observe(print(file_info()))
-
-  get_raw_text <- function(f) {
-    with_text <- try(pdf_text(f), silent = TRUE)
-    if(class(with_text) == "try-error") {
-      return(warning("No text layer or not a PDF."))
-    } else {
-      return(paste(with_text, collapse = " "))
-    }
-  }
 
   # Check that required data is OK
   validate_data <- function() {
@@ -68,82 +59,6 @@ shinyServer(function(input, output) {
       return(TRUE)
     }
     return(FALSE)
-  }
-
-  submit_changes <- function() {
-    file_id <- rand_str()
-    prep_species <- ifelse(input$in_species != "",
-                           strsplit(input$in_species, split = "; "),
-                           NA)
-    prep_geo <- ifelse(!is.na(input$in_geo) & input$in_geo != "",
-                       strsplit(input$in_geo, split = "; "),
-                       NA)
-    prep_tags <- ifelse(input$in_tags != "",
-                        strsplit(input$in_tags, split = "; "),
-                        NA)
-
-    result <- docs_create(
-      index = "esadocs",
-      type = input$in_doctype,
-      id = file_id,
-      body = list(
-        doc = list(
-          title = get_value(input$in_title, "title"),
-          n_pages = ifelse(input$in_npages != "" | is.null(got_dat()$n_pages),
-                           as.numeric(input$in_npages),
-                           as.numeric(got_dat()$n_pages)),
-          fr_citation_page = ifelse(input$in_frpage != "" |
-                                      is.null(got_dat()$fr_citation_page),
-                                    input$in_frpage,
-                                    got_dat()$fr_citation_page),
-          federal_agency = ifelse(input$in_fed != "" |
-                                    is.null(got_dat()$federal_agency),
-                                  input$in_fed,
-                                  got_dat()$federal_agency),
-          activity_code = ifelse(input$in_actcode != "" |
-                                   is.null(got_dat()$activity_code),
-                                 input$in_actcode,
-                                 got_dat()$activity_code),
-          ch_status = ifelse(!is.na(input$in_chstatus) |
-                               is.null(got_dat()$ch_status),
-                             input$in_chstatus,
-                             got_dat()$ch_status),
-          doc_type = ifelse(input$in_misc_doctype != "" |
-                              is.null(got_dat()$doc_type),
-                            input$in_misc_doctype,
-                            got_dat()$doc_type),
-          species = ifelse(!is.na(prep_species) | is.null(got_dat()$species),
-                           prep_species,
-                           got_dat()$species),
-          geo = ifelse(!is.na(prep_geo) | is.null(got_dat()$geo),
-                       prep_geo,
-                       got_dat()$geo),
-          tags = ifelse(!is.na(prep_tags) | is.null(got_dat()$tags),
-                        prep_tags,
-                        got_dat()$tags)
-        )
-      )
-    )
-    dater <- NA
-    if(input$in_date != "") {
-      if(input$in_date == "NA") {
-        to_add_date <- NA
-      } else {
-        isdate <- try(as.Date(input$in_date))
-        if(class(isdate) != "try-error") {
-          to_add_date <- input$in_date
-        } else {
-          stop(paste(input$in_date, "is not a date."))
-        }
-      }
-      dater <- docs_update(
-        index = "esadocs",
-        type = got_doc()$`_type`,
-        id = cur_doc(),
-        body = list( doc = list( date = to_add_date ) )
-      )$result
-    }
-    return(list(main_res = result$result, date_res = dater))
   }
 
   # Submit modal
@@ -231,6 +146,117 @@ shinyServer(function(input, output) {
     removeModal()
   })
 
+  # Submit for real and remove modal
+  observeEvent(input$real_submit, {
+    if(input$key_code == Sys.getenv("ESADOC_KEY")) {
+      # dest <- gsub(prep_pdfpath(),
+      #              pattern = "https://esadocs.cci-dev.org",
+      #              replacement = "/home/jacobmalcom/Data")
+      pdf_path <- prep_pdfpath()
+      dest <- gsub(pdf_path,
+                   pattern = "https://esadocs.cci-dev.org/ESAdocs/misc",
+                   replacement = "/Users/jacobmalcom/temp")
+      cp_res <- file.copy(file_info()$datapath, dest, overwrite = FALSE)
+      if(!cp_res) {
+
+      }
+      new_data <- submit_data()
+      observe(print(paste("new_data$main_res:", new_data$main_res)))
+
+      OKS <- c("noop", "updated", "created")
+      observe(print(cp_res))
+      if(cp_res & new_data$main_res %in% OKS) {
+        shinyBS::createAlert(
+          session,
+          anchorId = "success_note",
+          content = paste("Data for", input$in_title,
+                          "added! Record ID = ", new_data$file_id),
+          style = "success",
+          append = FALSE
+        )
+        log_changes()
+      } else {
+        shinyBS::createAlert(
+          session,
+          anchorId = "success_note",
+          content = paste("Data for", input$in_title, "failed!"),
+          style = "error",
+          append = FALSE
+        )
+      }
+      fields <- c("doc_id", "in_title", "in_date", "in_npages",
+                  "in_fed", "in_actcode", "in_frpage", "in_chstatus",
+                  "in_misc_doctype", "in_species", "in_geo", "in_tags")
+      res <- lapply(fields, updateTextInput, session = session, value = "")
+
+    } else if(input$key_code == "") {
+      showModal(modalDialog(
+        title = HTML("<h3>Key required</h3>"),
+        HTML("<p style='font-size:large'>Enter the current key found in the
+             shared GDrive folder.</p>"),
+        size = "m",
+        footer = actionButton(
+          "cancel_submit",
+          label = "OK",
+          style = "background-color: #F44336; color: white"
+        )
+        ))
+    }
+  })
+
+  prep_pdfpath <- function() {
+    fname <- file_info()$name
+    fname <- gsub(fname, pattern = " ", replacement = "_")
+    fname <- gsub(x = fname, pattern = "&", replacement = "and")
+    fname <- gsub(x = fname, pattern = "\\(|\\)|\'|\"", replacement = "")
+    fname <- gsub(x = fname, pattern = "\\,", replacement = "")
+    dest <- file.path("https://esadocs.cci-dev.org/ESAdocs",
+                      input$in_doctype,
+                      fname)
+    return(dest)
+  }
+
+  submit_data <- function() {
+    file_id <- rand_str()
+    prep_agency <- ifelse(input$in_fed != "",
+                          strsplit(input$in_fed, split = "; "),
+                          NA)
+    prep_species <- ifelse(input$in_species != "",
+                           strsplit(input$in_species, split = "; "),
+                           NA)
+    prep_geo <- ifelse(!is.na(input$in_geo) & input$in_geo != "",
+                       strsplit(input$in_geo, split = "; "),
+                       NA)
+    prep_tags <- ifelse(input$in_tags != "",
+                        strsplit(input$in_tags, split = "; "),
+                        NA)
+
+    result <- docs_create(
+      index = "esadocs",
+      type = input$in_doctype,
+      id = file_id,
+      body = list(
+        doc = list(
+          title = input$in_title,
+          date = ifelse(input$in_date != "NA", input$in_date, NA),
+          pdf_path = prep_pdfpath(),
+          n_pages = ifelse(input$in_npages != "", input$in_npages, NA),
+          fr_citation_page = ifelse(input$in_frpage != "", input$in_frpage, NA),
+          federal_agency = ifelse(input$in_fed != "", prep_agency, NA),
+          activity_code = ifelse(input$in_actcode != "", input$in_actcode, NA),
+          ch_status = ifelse(input$in_chstatus != "", input$in_chstatus, NA),
+          raw_txt = paste(pdf_text(file_info()$datapath), collapse = " "),
+          species = ifelse(!is.na(prep_species), prep_species, NA),
+          geo = ifelse(!is.na(prep_geo), prep_geo, NA),
+          tags = ifelse(!is.na(prep_tags), prep_tags, NA)
+        )
+      )
+    )
+    return(list(file_id = file_id,
+                main_res = result$result,
+                fpath = prep_pdfpath()))
+  }
 
 
 })
+

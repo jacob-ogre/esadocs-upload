@@ -12,6 +12,22 @@ rand_str <- function(len=30) {
 
 shinyServer(function(input, output, session) {
 
+        shinyBS::createAlert(
+          session,
+          anchorId = "more_data",
+          content = paste(
+            "<p style='font-weight:bold'>",
+            "Please include as much data as possible. We will process the",
+            "document with various programs to extract additional structured",
+            "data, but manually entered data can help humans search for",
+            "documents using human-recognized patterns.</b>"
+          ),
+          style = "info",
+          dismiss = TRUE,
+          append = FALSE
+        )
+
+
   file_info <- reactive({
     if(!is.null(input$upload_file)) {
       return(input$upload_file)
@@ -19,7 +35,7 @@ shinyServer(function(input, output, session) {
     return(NULL)
   })
 
-  observe(print(file_info()))
+  # observe(print(file_info()))
 
   # Check that required data is OK
   validate_data <- function() {
@@ -75,13 +91,14 @@ shinyServer(function(input, output, session) {
               paste("<b>Type</b>:", input$in_doctype),
               paste("<b># pages</b>:", input$in_npages),
               paste("<b>FR citation</b>:", input$in_frpage),
-              paste("<b>Federal agency</b>:", input$in_fed),
+              paste("<b>Federal agency(ies)</b>:", input$in_fed),
               paste("<b>Activity code</b>:", input$in_actcode),
               paste("<b>CH status</b>:", input$in_chstatus),
               paste("<b>Misc. doc type</b>:", input$in_misc_doctype),
               paste("<b>Species</b>:", input$in_species),
               paste("<b>Geo-tags</b>:", input$in_geo),
               paste("<b>Tags</b>:", input$in_tags),
+              paste("<b>Original URL</b>:", input$in_orig_url),
               "</div>"
             ),
             collapse = "<br>")
@@ -113,7 +130,8 @@ shinyServer(function(input, output, session) {
           tags$ul(
             span(style="font-style:italic; font-weight:bold;",
                  "The PDF doesn't have embedded text."),
-            "We only accept PDFs with selectable at this time."
+            "We only accept PDFs with selectable text. Please use an optical
+            character recognition (OCR) program to make text available."
           ),
           tags$ul(
             span(style="font-style:italic; font-weight:bold;",
@@ -130,9 +148,15 @@ shinyServer(function(input, output, session) {
                  "The document type is not selected."),
             "A non-'Select one' document type must be selected."
           ),
-          p("Please correct the error and re-try your submission.")
+          p("Please correct the error and re-try your submission."),
+          HTML(
+            "<p>Think there is an error with this app? Have a document that isn't
+            passing the filters but should be included?
+            <a href='mailto:esa@defenders.org'>Contact us.</a></p>"
+          )
         ),
         size = "m",
+        easyClose = TRUE,
         footer = actionButton(
           "cancel_submit",
           label = "OK",
@@ -149,32 +173,36 @@ shinyServer(function(input, output, session) {
   # Submit for real and remove modal
   observeEvent(input$real_submit, {
     if(input$key_code == Sys.getenv("ESADOC_KEY")) {
-      # dest <- gsub(prep_pdfpath(),
-      #              pattern = "https://esadocs.cci-dev.org",
-      #              replacement = "/home/jacobmalcom/Data")
       pdf_path <- prep_pdfpath()
-      dest <- gsub(pdf_path,
-                   pattern = "https://esadocs.cci-dev.org/ESAdocs/misc",
-                   replacement = "/Users/jacobmalcom/temp")
+      dest <- gsub(prep_pdfpath(),
+                   pattern = "https://esadocs.cci-dev.org",
+                   replacement = "/home/jacobmalcom/Data")
+      # dest <- gsub(pdf_path,
+      #              pattern = "https://esadocs.cci-dev.org/ESAdocs",
+      #              replacement = "/Users/jacobmalcom/temp")
       cp_res <- file.copy(file_info()$datapath, dest, overwrite = FALSE)
       if(!cp_res) {
-
+        dest <- paste0(dest, ".", rand_str(5), ".pdf")
+        pdf_path <- gsub(dest,
+                         pattern = "/home/jacobmalcom/Data",
+                         replacement = "https://esadocs.cci-dev.org/ESAdocs")
+        # pdf_path <- gsub(dest,
+        #                  pattern = "/Users/jacobmalcom/temp",
+        #                  replacement = "https://esadocs.cci-dev.org/ESAdocs/misc")
+        cp_res <- file.copy(file_info()$datapath, dest, overwrite = FALSE)
       }
-      new_data <- submit_data()
-      observe(print(paste("new_data$main_res:", new_data$main_res)))
+      new_data <- submit_data(pdf_path)
 
       OKS <- c("noop", "updated", "created")
-      observe(print(cp_res))
       if(cp_res & new_data$main_res %in% OKS) {
         shinyBS::createAlert(
           session,
           anchorId = "success_note",
-          content = paste("Data for", input$in_title,
-                          "added! Record ID = ", new_data$file_id),
+          content = paste("Data for <b>", input$in_title,
+                          "</b> added! <br> Record ID = ", new_data$file_id),
           style = "success",
           append = FALSE
         )
-        log_changes()
       } else {
         shinyBS::createAlert(
           session,
@@ -186,21 +214,27 @@ shinyServer(function(input, output, session) {
       }
       fields <- c("doc_id", "in_title", "in_date", "in_npages",
                   "in_fed", "in_actcode", "in_frpage", "in_chstatus",
-                  "in_misc_doctype", "in_species", "in_geo", "in_tags")
+                  "in_species", "in_geo", "in_tags", "in_orig_url")
       res <- lapply(fields, updateTextInput, session = session, value = "")
-
-    } else if(input$key_code == "") {
+      updateSelectInput(session, "in_doctype")
+      removeModal()
+      removeClass(id = "key_code", "attention")
+      reset("upload_file")
+      file.remove(file_info()$datapath)
+    } else {
       showModal(modalDialog(
         title = HTML("<h3>Key required</h3>"),
-        HTML("<p style='font-size:large'>Enter the current key found in the
-             shared GDrive folder.</p>"),
+        HTML("<p style='font-size:large'>Enter the correct current key found in
+             the shared OneDrive folder.</p>"),
         size = "m",
+        easyClose = TRUE,
         footer = actionButton(
           "cancel_submit",
           label = "OK",
           style = "background-color: #F44336; color: white"
         )
-        ))
+      ))
+      addClass(id = "key_code", "attention")
     }
   })
 
@@ -216,7 +250,7 @@ shinyServer(function(input, output, session) {
     return(dest)
   }
 
-  submit_data <- function() {
+  submit_data <- function(pdf_path) {
     file_id <- rand_str()
     prep_agency <- ifelse(input$in_fed != "",
                           strsplit(input$in_fed, split = "; "),
@@ -230,32 +264,64 @@ shinyServer(function(input, output, session) {
     prep_tags <- ifelse(input$in_tags != "",
                         strsplit(input$in_tags, split = "; "),
                         NA)
+    prep_md5 <- digest(file_info()$datapath, "md5", file = TRUE)
 
     result <- docs_create(
       index = "esadocs",
       type = input$in_doctype,
       id = file_id,
       body = list(
-        doc = list(
-          title = input$in_title,
-          date = ifelse(input$in_date != "NA", input$in_date, NA),
-          pdf_path = prep_pdfpath(),
-          n_pages = ifelse(input$in_npages != "", input$in_npages, NA),
-          fr_citation_page = ifelse(input$in_frpage != "", input$in_frpage, NA),
-          federal_agency = ifelse(input$in_fed != "", prep_agency, NA),
-          activity_code = ifelse(input$in_actcode != "", input$in_actcode, NA),
-          ch_status = ifelse(input$in_chstatus != "", input$in_chstatus, NA),
-          raw_txt = paste(pdf_text(file_info()$datapath), collapse = " "),
-          species = ifelse(!is.na(prep_species), prep_species, NA),
-          geo = ifelse(!is.na(prep_geo), prep_geo, NA),
-          tags = ifelse(!is.na(prep_tags), prep_tags, NA)
-        )
+        title = input$in_title,
+        date = ifelse(input$in_date != "NA", input$in_date, NA),
+        type = input$in_doctype,
+        pdf_path = pdf_path,
+        pdf_md5 = prep_md5,
+        link = ifelse(input$in_orig_url != "", input$in_orig_url, NA),
+        n_pages = ifelse(input$in_npages != "", input$in_npages, NA),
+        fr_citation_page = ifelse(input$in_frpage != "", input$in_frpage, NA),
+        federal_agency = ifelse(input$in_fed != "", prep_agency, NA),
+        activity_code = ifelse(input$in_actcode != "", input$in_actcode, NA),
+        ch_status = ifelse(input$in_chstatus != "", input$in_chstatus, NA),
+        raw_txt = paste(pdf_text(file_info()$datapath), collapse = " "),
+        species = ifelse(!is.na(prep_species), prep_species, NA),
+        geo = ifelse(!is.na(prep_geo), prep_geo, NA),
+        tags = ifelse(!is.na(prep_tags), prep_tags, NA)
       )
     )
     return(list(file_id = file_id,
                 main_res = result$result,
                 fpath = prep_pdfpath()))
   }
+
+  # Help modal
+  observeEvent(input$help, {
+    showModal(modalDialog(
+      title = "Add a new ESAdoc (+ data)",
+      div(style='font-size:larger',
+        hr(),
+        h4("Caution: With great power comes great responsibility"),
+        p("This app is a convenience tool to add new documents and data to the
+          ESAdocs database. For now, there is no round of review...once
+          a document is submitted, the elasticsearch database is changed!
+          There's no need to worry about this - we can use `ESAdocs edit`
+          to make revisions - but be aware."),
+        hr(),
+        div(style="color:#000000;background-color:#cccccc; padding:10px",
+          h4("Uploading docs and data"),
+          tags$ol(
+            tags$li("Click the `BROWSE` button to select a file to upload."),
+            tags$li("Fill in the required data (first row)."),
+            tags$li("Add the current key (alpha-numeric text)."),
+            tags$li("Submit to upload the file and make it searchable (or Cancel).")
+          ),
+          HTML("<img src='simple_upload.png' width='100%'>")
+        )
+      ),
+      size = "l",
+      easyClose = TRUE,
+      footer = modalButton("Close")
+    ))
+  })
 
 
 })

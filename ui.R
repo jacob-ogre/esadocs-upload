@@ -33,36 +33,36 @@ body <- dashboardBody(
             10,
             fluidRow(
               column(2),
-              column(4,
+              column(6,
                 fileInput(
                   "upload_file",
                   "Upload PDF",
-                  width = "400px"
+                  width = "100%"
                 )
               ),
-              column(4,
+              column(3,
                 helpText(
                   HTML(
-                    "The PDF must have embedded text. If an 'image' PDF, please
-                    use optical character recognition (OCR) software or
-                    <a href='https://cci-dev.org/shiny/closed/PDF_OCR/'
-                    target='_blank'>try Defenders' OCR app</a>.")
+                    "The PDF must have embedded text. If an image-only PDF,
+                    please use optical character recognition (OCR) software to
+                    generate a text layer.")
                 )
               )
             ),
             fluidRow(hr(class="style-four")),
             fluidRow(
-              shinyBS::bsAlert("success_note")
+              column(2),
+              column(8,
+                shinyBS::bsAlert("success_note")
+              ),
+              column(2)
             ),
             fluidRow(
+              column(2),
               column(8,
-                helpText(
-                  "Please include as much data as possible. We will process the
-                  document with various programs to extract additional structured
-                  data, but manually entered data can help humans search for
-                  documents using human-recognized patterns."
-                )
-              )
+                shinyBS::bsAlert("more_data")
+              ),
+              column(2)
             ),
             fluidRow(
               br(),
@@ -194,8 +194,20 @@ body <- dashboardBody(
               column(
                 4,
                 textInput(
+                  inputId = "in_orig_url",
+                  label = "Original online version",
+                  width = "110%",
+                  value = NA,
+                  placeholder = "URL (alpha-numeric)"
+                )
+              )
+            ),
+            fluidRow(
+              column(
+                4,
+                textInput(
                   inputId = "key_code",
-                  label = "Current key",
+                  label = "Current key*",
                   width = "110%",
                   value = NA,
                   placeholder = "alpha-numeric"
@@ -205,7 +217,7 @@ body <- dashboardBody(
                 p(style = "font-size:larger; color:#4d4d4d",
                   "* = required field")
               ),
-              column(7),
+              column(3),
               column(
                 1,
                 actionButton(
@@ -225,6 +237,27 @@ body <- dashboardBody(
             ),
             fluidRow(
               br(), br()
+            ),
+            fluidRow(
+              column(1),
+              column(
+                10,
+                div(
+                  style = "text-align:center",
+                  hr(),
+                  HTML('<footer>
+                       <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+                       <img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a>
+                       <br />
+                       This <span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/InteractiveResource" rel="dct:type">work</span>
+                       by <a xmlns:cc="http://creativecommons.org/ns" href="http://defenders.org" property="cc:attributionName" rel="cc:attributionURL">Defenders of Wildlife</a>
+                       is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+                       </footer>'),
+                  hr(),
+                  br()
+                )
+              ),
+              column(1)
             )
           ),
           column(

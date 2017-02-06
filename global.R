@@ -1,5 +1,6 @@
 # BSD_2_clause
 
+library(digest)
 library(dplyr)
 library(elastic)
 library(shiny)

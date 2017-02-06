@@ -143,3 +143,22 @@ input.form-contol, input[type=text], [type=text].form-contol {
   padding-left: 15px !important;
 }
 
+.alert-success {
+  background-color: #4CAF50;
+  border-radius: 2px;
+}
+
+.alert-info {
+  background-color: #8C9EFF;
+  border-radius: 2px;
+}
+
+.alert-error {
+  background-color: #F44336;
+  border-radius: 2px;
+}
+
+.attention {
+  background-color: #FFCDD2 !important;
+  border-radius: 3px;
+}

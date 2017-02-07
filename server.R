@@ -255,19 +255,22 @@ shinyServer(function(input, output, session) {
             style = "success",
             append = FALSE
           )
+          removeModal()
+          removeClass(id = "key_code", "attention")
+          clear_most_fields()
+          reset("upload_file")
         } else {
           file.remove(file_info()$datapath)
           shinyBS::createAlert(
             session,
             anchorId = "success_note",
-            content = paste("Data for", input$in_title, "failed!"),
+            content = paste("Data input for", input$in_title, "failed!<br>",
+                            "Please check the inputs and try again. If the",
+                            "error persists,",
+                            "<a href='mailto:esa@defenders.org'>contact us</a>."),
             style = "error",
             append = FALSE
           )
-          removeModal()
-          removeClass(id = "key_code", "attention")
-          clear_most_fields()
-          reset("upload_file")
         }
       }
     } else {

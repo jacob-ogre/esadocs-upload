@@ -24,12 +24,13 @@ body <- dashboardBody(
         fluidRow(
           div(
             id = "spacer",
-            br(), br(), br(), br(), br(), br()
+            br(), br(), br(), br(), br(), br(),
+            br(), br()
           ),
           hidden(
             div(
               id = "spacer_2",
-              br(), br(), br()
+              br(), br(), br(), br()
             )
           )
         ),

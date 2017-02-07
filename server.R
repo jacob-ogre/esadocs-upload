@@ -1,32 +1,18 @@
 # BSD_2_clause
 
 rand_str <- function(len=30) {
-  return(paste(sample(c(rep(0:9,each=5),
-                        LETTERS,
-                        letters),
-                      len,
-                      replace=TRUE),
-               collapse='')
-  )
+  str <- paste(
+    sample(
+      c(rep(0:9,each=5),
+        LETTERS,
+        letters),
+      len,
+      replace=TRUE),
+  collapse='')
+  return(str)
 }
 
 shinyServer(function(input, output, session) {
-
-        shinyBS::createAlert(
-          session,
-          anchorId = "more_data",
-          content = paste(
-            "<p style='font-weight:bold'>",
-            "Please include as much data as possible. We will process the",
-            "document with various programs to extract additional structured",
-            "data, but manually entered data can help humans search for",
-            "documents using human-recognized patterns.</b>"
-          ),
-          style = "info",
-          dismiss = TRUE,
-          append = FALSE
-        )
-
 
   file_info <- reactive({
     if(!is.null(input$upload_file)) {
@@ -35,21 +21,20 @@ shinyServer(function(input, output, session) {
     return(NULL)
   })
 
-  # observe(print(file_info()))
-
-  # Check that required data is OK
-  validate_data <- function() {
-    types = c("candidate", "conserv_agmt", "consultation",
-              "federal_register", "five_year_review", "misc",
-              "policy", "recovery_plan")
-    if(!is.null(file_info) &
-       input$in_title != "" &
-       input$in_date != "" &
-       input$in_doctype != "not_selected") {
-      is_pdf <- try(pdf_info(file_info()$datapath), silent = TRUE)
-      if(class(is_pdf) == "try-error") {
-        return(FALSE)
+  # TEST ELEMENTS
+  is_pdf <- reactive({
+    if(!is.null(file_info())) {
+      pdftest <- try(pdf_info(file_info()$datapath))
+      if(class(pdftest) != "try-error") {
+        return(TRUE)
       }
+      return(FALSE)
+    }
+    return(FALSE)
+  })
+
+  with_txt <- reactive({
+    if(!is.null(file_info())) {
       with_text <- try(pdf_text(file_info()$datapath), silent = TRUE)
       if(class(with_text) == "try-error") {
         return(FALSE)
@@ -58,186 +43,175 @@ shinyServer(function(input, output, session) {
         # may be OK but may fail this check (e.g., a map with just a few words)
         tokenized <- unlist(str_split(paste(with_text, collapse = " "), " "))
         tokenized <- tokenized[tokenized != ""]
-        if(length(tokenized) < 10) {
-          return(FALSE)
+        if(length(tokenized) > 10) {
+          return(TRUE)
         }
-      }
-      if(nchar(input$in_title) < 16 | nchar(input$in_title) > 256) {
         return(FALSE)
       }
-      is_date <- try(as.Date(input$in_date))
-      if(class(is_date) == "try-error") {
-        return(FALSE)
-      }
-      if(!(input$in_doctype %in% types)) {
-        return(FALSE)
-      }
-      return(TRUE)
     }
     return(FALSE)
+  })
+
+  title_ok <- reactive({
+    if(nchar(input$in_title) > 8 & nchar(input$in_title) < 256) {
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  })
+
+  date_ok <- reactive({
+    is_date <- try(as.Date(input$in_date), silent = TRUE)
+    if(class(is_date) != "try-error") {
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  })
+
+  type_ok <- reactive({
+    types = c("candidate", "conserv_agmt", "consultation",
+              "federal_register", "five_year_review", "misc",
+              "policy", "recovery_plan")
+    if(input$in_doctype %in% types) {
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  })
+
+  key_ok <- reactive({
+    if(input$key_code == Sys.getenv("ESADOC_KEY")) {
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  })
+
+  # BATCH TESTS
+  test_pdf_text <- function() {
+    if(is_pdf() & with_txt()) {
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  }
+
+  test_required <- function() {
+    if(title_ok() & date_ok() & type_ok() & key_ok()) {
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  }
+
+  observe({
+    if(test_pdf_text()) {
+      hide("spacer", anim = TRUE, animType = "slide", time = 1)
+      hide("pad_foot", anim = FALSE)
+      show("pad_foot_2", anim = TRUE, animType = "fade", time = 1)
+      show("spacer_2", anim = TRUE, animType = "slide", time = 1)
+      show("req_1", anim = TRUE, animType = "fade", time = 1)
+      show("req_2", anim = TRUE, animType = "fade", time = 1)
+    }
+  })
+
+  observe({
+    if(test_required()) {
+      hide("spacer_2", anim = TRUE, animType = "slide", time = 1)
+      show("optional_1", anim = TRUE, animType = "slide", time = 1)
+      show("optional_2", anim = TRUE, animType = "slide", time = 1)
+      show("optional_3", anim = TRUE, animType = "slide", time = 1)
+      show("submit_btn", anim = TRUE, animType = "fade", time = 1)
+    }
+  })
+
+  shinyBS::createAlert(
+    session,
+    anchorId = "more_data",
+    content = paste(
+      "<p style='font-weight:bold'>",
+      "Please include as much data as possible. We will process the",
+      "document with various programs to extract additional structured",
+      "data, but manually entered data can help humans search for",
+      "documents using human-recognized patterns.</b>"
+    ),
+    style = "info",
+    dismiss = TRUE,
+    append = FALSE
+  )
+
+  # CLEAR INPUT FIELDS
+  clear_most_fields <- function() {
+    fields <- c("doc_id", "in_title", "in_date", "in_npages",
+                "in_fed", "in_actcode", "in_frpage", "in_chstatus",
+                "in_species", "in_geo", "in_tags", "in_orig_url")
+    res <- lapply(fields, updateTextInput, session = session, value = "")
+    updateSelectInput(session, "in_doctype", selected = "not_selected")
+    reset("upload_file")
+  }
+
+  clear_all_fields <- function() {
+    clear_most_fields()
+    updateTextInput(session, "key_code", value = "")
   }
 
   # Submit modal
   observeEvent(input$submit, {
-    if(validate_data()) {
-      showModal(modalDialog(
-        title = HTML("<h3>Submit</h3>"),
-        HTML("<h4>Submit this document and data?</h4>"),
-        HTML(
-          paste(
-            c("<div style='font-size:large; padding-left:15px'>",
-              paste("<b>Title</b>:", input$in_title),
-              paste("<b>Date</b>:", input$in_date),
-              paste("<b>Type</b>:", input$in_doctype),
-              paste("<b># pages</b>:", input$in_npages),
-              paste("<b>FR citation</b>:", input$in_frpage),
-              paste("<b>Federal agency(ies)</b>:", input$in_fed),
-              paste("<b>Activity code</b>:", input$in_actcode),
-              paste("<b>CH status</b>:", input$in_chstatus),
-              paste("<b>Misc. doc type</b>:", input$in_misc_doctype),
-              paste("<b>Species</b>:", input$in_species),
-              paste("<b>Geo-tags</b>:", input$in_geo),
-              paste("<b>Tags</b>:", input$in_tags),
-              paste("<b>Original URL</b>:", input$in_orig_url),
-              "</div>"
-            ),
-            collapse = "<br>")
-        ),
-        size = "m",
-        footer = tagList(
-          actionButton(
-            "cancel_submit",
-            label = "No",
-            style = "background-color: #F44336; color: white"),
-          actionButton(
-            "real_submit",
-            label = "Yes",
-            style = "background-color: #304FFE; color: white")
-        )
-      ))
-    } else {
-      showModal(modalDialog(
-        title = HTML("<h3>Error</h3>"),
-        div(
-          style = "font-size:larger; font-weight:500;",
-          p("There was an error with the file or data you are trying to submit.
-             It may be:"),
-          tags$ul(
-            span(style="font-style:italic; font-weight:bold;",
-                 "The file is not a PDF."),
-            "We only accept PDFs at this time."
+    showModal(modalDialog(
+      title = HTML("<h3>Submit</h3>"),
+      HTML("<h4>Submit the document and this data?</h4>"),
+      HTML(
+        paste(
+          c("<div style='font-size:large; padding-left:15px'>",
+            paste("<b>Title</b>:", input$in_title),
+            paste("<b>Date</b>:", input$in_date),
+            paste("<b>Type</b>:", input$in_doctype),
+            paste("<b># pages</b>:", input$in_npages),
+            paste("<b>FR citation</b>:", input$in_frpage),
+            paste("<b>Federal agency(ies)</b>:", input$in_fed),
+            paste("<b>Activity code</b>:", input$in_actcode),
+            paste("<b>CH status</b>:", input$in_chstatus),
+            paste("<b>Misc. doc type</b>:", input$in_misc_doctype),
+            paste("<b>Species</b>:", input$in_species),
+            paste("<b>Geo-tags</b>:", input$in_geo),
+            paste("<b>Tags</b>:", input$in_tags),
+            paste("<b>Original URL</b>:", input$in_orig_url),
+            "</div>"
           ),
-          tags$ul(
-            span(style="font-style:italic; font-weight:bold;",
-                 "The PDF doesn't have embedded text."),
-            "We only accept PDFs with selectable text. Please use an optical
-            character recognition (OCR) program to make text available."
-          ),
-          tags$ul(
-            span(style="font-style:italic; font-weight:bold;",
-                 "The title is too short or too long."),
-            "Title lengths should be 16-256 characters."
-          ),
-          tags$ul(
-            span(style="font-style:italic; font-weight:bold;",
-                 "The date is not properly formatted."),
-            "Please use the international standard, YYYY-MM-DD."
-          ),
-          tags$ul(
-            span(style="font-style:italic; font-weight:bold;",
-                 "The document type is not selected."),
-            "A non-'Select one' document type must be selected."
-          ),
-          p("Please correct the error and re-try your submission."),
-          HTML(
-            "<p>Think there is an error with this app? Have a document that isn't
-            passing the filters but should be included?
-            <a href='mailto:esa@defenders.org'>Contact us.</a></p>"
-          )
-        ),
-        size = "m",
-        easyClose = TRUE,
-        footer = actionButton(
+          collapse = "<br>")
+      ),
+      size = "m",
+      footer = tagList(
+        actionButton(
           "cancel_submit",
-          label = "OK",
-          style = "background-color: #F44336; color: white"
-        )
-      ))
-    }
+          label = "No",
+          style = "background-color: #F44336; color: white"),
+        actionButton(
+          "real_submit",
+          label = "Yes",
+          style = "background-color: #304FFE; color: white")
+      )
+    ))
   })
 
-  observeEvent(input$cancel_submit, {
-    removeModal()
-  })
-
-  # Submit for real and remove modal
-  observeEvent(input$real_submit, {
-    if(input$key_code == Sys.getenv("ESADOC_KEY")) {
-      pdf_path <- prep_pdfpath()
-      dest <- gsub(prep_pdfpath(),
-                   pattern = "https://esadocs.cci-dev.org",
-                   replacement = "/home/jacobmalcom/Data")
-      # dest <- gsub(pdf_path,
-      #              pattern = "https://esadocs.cci-dev.org/ESAdocs",
-      #              replacement = "/Users/jacobmalcom/temp")
+  copy_upload_file <- function() {
+    pdf_path <- prep_pdfpath()
+    dest <- gsub(pdf_path,
+                 pattern = "https://esadocs.cci-dev.org",
+                 replacement = "/home/jacobmalcom/Data")
+    cp_res <- file.copy(file_info()$datapath, dest, overwrite = FALSE)
+    if(!cp_res) {
+      dest <- paste0(dest, ".", rand_str(5), ".pdf")
+      pdf_path <- gsub(dest,
+                       pattern = "/home/jacobmalcom/Data",
+                       replacement = "https://esadocs.cci-dev.org/ESAdocs")
       cp_res <- file.copy(file_info()$datapath, dest, overwrite = FALSE)
-      if(!cp_res) {
-        dest <- paste0(dest, ".", rand_str(5), ".pdf")
-        pdf_path <- gsub(dest,
-                         pattern = "/home/jacobmalcom/Data",
-                         replacement = "https://esadocs.cci-dev.org/ESAdocs")
-        # pdf_path <- gsub(dest,
-        #                  pattern = "/Users/jacobmalcom/temp",
-        #                  replacement = "https://esadocs.cci-dev.org/ESAdocs/misc")
-        cp_res <- file.copy(file_info()$datapath, dest, overwrite = FALSE)
-      }
-      new_data <- submit_data(pdf_path)
-
-      OKS <- c("noop", "updated", "created")
-      if(cp_res & new_data$main_res %in% OKS) {
-        shinyBS::createAlert(
-          session,
-          anchorId = "success_note",
-          content = paste("Data for <b>", input$in_title,
-                          "</b> added! <br> Record ID = ", new_data$file_id),
-          style = "success",
-          append = FALSE
-        )
-      } else {
-        shinyBS::createAlert(
-          session,
-          anchorId = "success_note",
-          content = paste("Data for", input$in_title, "failed!"),
-          style = "error",
-          append = FALSE
-        )
-      }
-      fields <- c("doc_id", "in_title", "in_date", "in_npages",
-                  "in_fed", "in_actcode", "in_frpage", "in_chstatus",
-                  "in_species", "in_geo", "in_tags", "in_orig_url")
-      res <- lapply(fields, updateTextInput, session = session, value = "")
-      updateSelectInput(session, "in_doctype")
-      removeModal()
-      removeClass(id = "key_code", "attention")
-      reset("upload_file")
-      file.remove(file_info()$datapath)
-    } else {
-      showModal(modalDialog(
-        title = HTML("<h3>Key required</h3>"),
-        HTML("<p style='font-size:large'>Enter the correct current key found in
-             the shared OneDrive folder.</p>"),
-        size = "m",
-        easyClose = TRUE,
-        footer = actionButton(
-          "cancel_submit",
-          label = "OK",
-          style = "background-color: #F44336; color: white"
-        )
-      ))
-      addClass(id = "key_code", "attention")
     }
-  })
+    return(list(cp_res = cp_res, pdf_path = pdf_path))
+  }
 
+  # CLEAN UP FILE NAMES, WHICH WILL BE UGLY
   prep_pdfpath <- function() {
     fname <- file_info()$name
     fname <- gsub(fname, pattern = " ", replacement = "_")
@@ -249,6 +223,57 @@ shinyServer(function(input, output, session) {
                       fname)
     return(dest)
   }
+
+  # Submit for real and remove modal
+  observeEvent(input$real_submit, {
+    if(key_ok()) {
+      copy_res <- copy_upload_file()
+      if(!copy_res$cp_res) {
+        showModal(modalDialog(
+          title = "Error",
+          p(style = "font-size: large",
+            icon("ban", "fa-3x"),
+            "There was an error with the file. You may try re-naming it,
+            but it probably won't help. To try another file, `Cancel` from
+            the main page."
+          ),
+          span(style = "text-align:center",
+               a(href="mailto:esa@defenders.org", "Contact us")),
+          size = "s",
+          footer = modalButton("Close"),
+          easyClose = TRUE
+        ))
+      } else {
+        new_data <- submit_data(copy_res$pdf_path)
+        OKS <- c("noop", "created")
+        if(new_data$main_res %in% OKS) {
+          shinyBS::createAlert(
+            session,
+            anchorId = "success_note",
+            content = paste("Data for <b>", input$in_title,
+                            "</b> added! <br> Record ID = ", new_data$file_id),
+            style = "success",
+            append = FALSE
+          )
+        } else {
+          file.remove(file_info()$datapath)
+          shinyBS::createAlert(
+            session,
+            anchorId = "success_note",
+            content = paste("Data for", input$in_title, "failed!"),
+            style = "error",
+            append = FALSE
+          )
+          removeModal()
+          removeClass(id = "key_code", "attention")
+          clear_most_fields()
+          reset("upload_file")
+        }
+      }
+    } else {
+      addClass(id = "key_code", "attention")
+    }
+  })
 
   submit_data <- function(pdf_path) {
     file_id <- rand_str()
@@ -292,6 +317,44 @@ shinyServer(function(input, output, session) {
                 main_res = result$result,
                 fpath = prep_pdfpath()))
   }
+
+  observeEvent(input$cancel, {
+    showModal(modalDialog(
+      title = "Cancel",
+      "Cancel this upload?",
+      size = "s",
+      footer = tagList(
+        actionButton(
+          "cancel_cancel",
+          label = "No",
+          style = "background-color: #F44336; color: white"
+        ),
+        actionButton(
+          "real_cancel",
+          label = "Yes",
+          style = "background-color: #304FFE; color: white"
+        )
+      )
+    ))
+  })
+
+  ######### CANCELS #########
+  # Cancel for real and remove cancel modal
+  observeEvent(input$real_cancel, {
+    file.remove(file_info()$datapath)
+    reset("upload_file")
+    clear_most_fields()
+    removeModal()
+  })
+
+  # Cancel the cancel
+  observeEvent(input$cancel_cancel, {
+    removeModal()
+  })
+
+  observeEvent(input$cancel_submit, {
+    removeModal()
+  })
 
   # Help modal
   observeEvent(input$help, {

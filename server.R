@@ -109,6 +109,8 @@ shinyServer(function(input, output, session) {
     if(test_pdf_text()) {
       hide("spacer", anim = TRUE, animType = "slide", time = 1)
       hide("pad_foot", anim = FALSE)
+      show("top_hr", anim = FALSE)
+      show("req_head", anim = FALSE)
       show("pad_foot_2", anim = TRUE, animType = "fade", time = 1)
       show("spacer_2", anim = TRUE, animType = "slide", time = 1)
       show("req_1", anim = TRUE, animType = "fade", time = 1)
@@ -119,6 +121,8 @@ shinyServer(function(input, output, session) {
   observe({
     if(test_required()) {
       hide("spacer_2", anim = TRUE, animType = "slide", time = 1)
+      hide("req_head", anim = FALSE)
+      show("opt_head", anim = FALSE)
       show("optional_1", anim = TRUE, animType = "slide", time = 1)
       show("optional_2", anim = TRUE, animType = "slide", time = 1)
       show("optional_3", anim = TRUE, animType = "slide", time = 1)

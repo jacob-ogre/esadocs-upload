@@ -44,25 +44,25 @@ body <- dashboardBody(
           column(10,
             fluidRow(
               column(2),
-              column(6,
+              column(8,
                 myFileInput(
                   "upload_file",
-                  "Upload PDF",
+                  "Upload an ESA-related PDF",
                   accept = "application/pdf",
-                  placeholder = "Select a PDF with text",
+                  placeholder = "Select a PDF with embedded text",
                   width = "100%"
                 )
-              ),
-              column(3,
-                helpText(
-                  HTML(
-                    "The PDF must have embedded text. If it's an image-only PDF,
-                    please use optical character recognition (OCR) software to
-                    generate a PDF with a text layer.")
-                )
+              # ),
+              # column(3,
+              #   helpText(
+              #     HTML(
+              #       "The PDF must have embedded text. If it's an image-only PDF,
+              #       please use optical character recognition (OCR) software to
+              #       generate a PDF with a text layer.")
+              #   )
               )
             ),
-            fluidRow(hr(class="style-four")),
+            fluidRow(hidden(div(id = "top_hr", hr(class="style-four")))),
             fluidRow(
               column(2),
               column(8,
@@ -71,11 +71,16 @@ body <- dashboardBody(
               column(2)
             ),
             fluidRow(
-              column(2),
-              column(8 #,
-                # shinyBS::bsAlert("more_data")
-              ),
-              column(2)
+              column(3,
+                hidden(div(
+                  id = "req_head",
+                  h5(class = "req_col", "Add required data")
+                )),
+                hidden(div(
+                  id = "opt_head",
+                  h5(class = "opt_col", "Add additional data")
+                ))
+              )
             ),
             fluidRow(
               hidden(div(id = "req_1",

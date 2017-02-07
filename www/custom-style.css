@@ -162,3 +162,12 @@ input.form-contol, input[type=text], [type=text].form-contol {
   background-color: #FFCDD2 !important;
   border-radius: 3px;
 }
+
+.req_col {
+  font-weight: 300;
+}
+
+.opt_col {
+  font-weight: 800;
+  font-style: italic;
+}

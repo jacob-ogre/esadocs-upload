@@ -25,12 +25,12 @@ body <- dashboardBody(
           div(
             id = "spacer",
             br(), br(), br(), br(), br(), br(),
-            br(), br()
+            br(), br(), br()
           ),
           hidden(
             div(
               id = "spacer_2",
-              br(), br(), br(), br()
+              br(), br(), br()
             )
           )
         ),
@@ -52,14 +52,6 @@ body <- dashboardBody(
                   placeholder = "Select a PDF with embedded text",
                   width = "100%"
                 )
-              # ),
-              # column(3,
-              #   helpText(
-              #     HTML(
-              #       "The PDF must have embedded text. If it's an image-only PDF,
-              #       please use optical character recognition (OCR) software to
-              #       generate a PDF with a text layer.")
-              #   )
               )
             ),
             fluidRow(hidden(div(id = "top_hr", hr(class="style-four")))),
@@ -283,21 +275,35 @@ body <- dashboardBody(
               ))
             ),
             fluidRow(
+              column(5),
+              column(1,
+                     HTML('
+          <a href="http://defenders.org">
+          <img style="vertical-align:middle" src="DOW_logo_small.png" height="60"></a>
+        ')
+              ),
+              column(1,
+                     HTML('
+          <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+          <img alt="Creative Commons License" style="border-width:0;padding-top:15px" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a>
+        ')
+              ),
+              column(5)
+            ),
+            fluidRow(
               column(1),
-              column(
-                10,
-                div(
-                  style = "text-align:center",
-                  HTML('<footer>
-                       <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
-                       <img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a>
-
-                       This <span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/InteractiveResource" rel="dct:type">work</span>
-                       by <a xmlns:cc="http://creativecommons.org/ns" href="http://defenders.org" property="cc:attributionName" rel="cc:attributionURL">Defenders of Wildlife</a>
-                       is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
-                       </footer>'),
-                  br()
-                )
+              column(10,
+                     div(
+                       style = "text-align:center",
+                       HTML('<footer>
+            <br />
+            <p>This <span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/InteractiveResource" rel="dct:type">work</span>
+            by <a xmlns:cc="http://creativecommons.org/ns" href="http://defenders.org" property="cc:attributionName" rel="cc:attributionURL">Defenders of Wildlife</a>
+            is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.</p>
+            <br />
+          </footer>'),
+                       br()
+                     )
               ),
               column(1)
             )

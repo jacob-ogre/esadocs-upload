@@ -58,7 +58,20 @@ body <- dashboardBody(
             fluidRow(
               column(2),
               column(8,
-                shinyBS::bsAlert("file_err_msg")
+                hidden(
+                  div(
+                    id = "not_a_pdf",
+                    class = "alert-error",
+                    p(style="text-align: center", "The file is not a PDF.")
+                  )
+                ),
+                hidden(
+                  div(
+                    id = "no_text_pdf",
+                    class = "alert-error",
+                    p(style="text-align: center", "The PDF has no embedded text")
+                  )
+                )
               ),
               column(2)
             ),

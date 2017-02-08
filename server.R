@@ -36,6 +36,10 @@ shinyServer(function(input, output, session) {
         return(TRUE)
       }
       # file.remove(file_info()$datapath)
+      show("not_a_pdf")
+      Sys.sleep(3)
+      hide("not_a_pdf")
+      reset("upload_file")
       return(FALSE)
     }
     return(FALSE)

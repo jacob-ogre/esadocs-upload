@@ -171,3 +171,13 @@ input.form-contol, input[type=text], [type=text].form-contol {
   font-weight: 800;
   font-style: italic;
 }
+
+.progress {
+  height: 22px;
+  font-weight: bold;
+  font-size: 14pt;
+}
+
+.bar-danger {
+  background-color: #E12834;
+}

@@ -54,6 +54,14 @@ body <- dashboardBody(
                 )
               )
             ),
+            fluidRow(textOutput("testing_msg")),
+            fluidRow(
+              column(2),
+              column(8,
+                shinyBS::bsAlert("file_err_msg")
+              ),
+              column(2)
+            ),
             fluidRow(hidden(div(id = "top_hr", hr(class="style-four")))),
             fluidRow(
               column(2),

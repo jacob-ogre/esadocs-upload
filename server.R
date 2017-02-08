@@ -1,5 +1,7 @@
 # BSD_2_clause
 
+options(shiny.maxRequestSize=10*1024^2)
+
 rand_str <- function(len=30) {
   str <- paste(
     sample(
@@ -21,6 +23,11 @@ shinyServer(function(input, output, session) {
     return(NULL)
   })
 
+  output$testing_msg <- renderText({
+    paste("input$upload_file", input$upload_file)
+    # paste("is_pdf:", is_pdf(), "with_txt:", with_txt(), "tempdir:", tempdir())
+  })
+
   # TEST ELEMENTS
   is_pdf <- reactive({
     if(!is.null(file_info())) {
@@ -28,6 +35,7 @@ shinyServer(function(input, output, session) {
       if(class(pdftest) != "try-error") {
         return(TRUE)
       }
+      # file.remove(file_info()$datapath)
       return(FALSE)
     }
     return(FALSE)
@@ -37,6 +45,9 @@ shinyServer(function(input, output, session) {
     if(!is.null(file_info())) {
       with_text <- try(pdf_text(file_info()$datapath), silent = TRUE)
       if(class(with_text) == "try-error") {
+        # show()
+        # file.remove(file_info()$datapath)
+        # reset("upload_file")
         return(FALSE)
       } else {
         # A hack to try to detect whether there is a text layer; some docs

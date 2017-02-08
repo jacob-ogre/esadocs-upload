@@ -232,6 +232,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$real_submit, {
     if(key_ok()) {
       copy_res <- copy_upload_file()
+      observe({print(input$in_orig_url)})
       if(!copy_res$cp_res) {
         showModal(modalDialog(
           title = "Error",

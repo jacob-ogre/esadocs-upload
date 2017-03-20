@@ -1,6 +1,6 @@
 # BSD_2_clause
 
-options(shiny.maxRequestSize=10*1024^2)
+options(shiny.maxRequestSize=30*1024^2)
 
 rand_str <- function(len=30) {
   str <- paste(
@@ -23,23 +23,21 @@ shinyServer(function(input, output, session) {
     return(NULL)
   })
 
-  output$testing_msg <- renderText({
-    paste("input$upload_file", input$upload_file)
-    # paste("is_pdf:", is_pdf(), "with_txt:", with_txt(), "tempdir:", tempdir())
+  observe({
+    html(html = "HELLO", selector = "#upload_file_progress > div")
   })
+
+  # output$testing_msg <- renderText({
+  #   paste("input$upload_file", input$upload_file)
+  # })
 
   # TEST ELEMENTS
   is_pdf <- reactive({
     if(!is.null(file_info())) {
-      pdftest <- try(pdf_info(file_info()$datapath))
+      pdftest <- try(pdf_info(file_info()$datapath), silent = TRUE)
       if(class(pdftest) != "try-error") {
         return(TRUE)
       }
-      # file.remove(file_info()$datapath)
-      show("not_a_pdf")
-      Sys.sleep(3)
-      hide("not_a_pdf")
-      reset("upload_file")
       return(FALSE)
     }
     return(FALSE)
@@ -49,9 +47,6 @@ shinyServer(function(input, output, session) {
     if(!is.null(file_info())) {
       with_text <- try(pdf_text(file_info()$datapath), silent = TRUE)
       if(class(with_text) == "try-error") {
-        # show()
-        # file.remove(file_info()$datapath)
-        # reset("upload_file")
         return(FALSE)
       } else {
         # A hack to try to detect whether there is a text layer; some docs
@@ -130,6 +125,33 @@ shinyServer(function(input, output, session) {
       show("spacer_2", anim = TRUE, animType = "slide", time = 1)
       show("req_1", anim = TRUE, animType = "fade", time = 1)
       show("req_2", anim = TRUE, animType = "fade", time = 1)
+    } else {
+      if(!is_pdf() & !is.null(file_info())) {
+        createAlert(
+          session,
+          "not_a_pdf_text",
+          title = "Not a PDF",
+          content = paste("The file is not a PDF or may be damaged. Please try
+                          another file."),
+          style = "error",
+          dismiss = TRUE
+        )
+        file.remove(file_info()$datapath)
+        reset("upload_file")
+      } else if(!with_txt() & !is.null(file_info())) {
+        createAlert(
+          session,
+          "not_a_pdf_text",
+          title = "No text",
+          content = paste("The PDF has no text, or so little that it looks like",
+                          "it needs OCR. Please try another file or <a",
+                          "href='mailto:esa@defenders.org'>contact us.</a>"),
+          style = "error",
+          dismiss = TRUE
+        )
+        file.remove(file_info()$datapath)
+        reset("upload_file")
+      }
     }
   })
 

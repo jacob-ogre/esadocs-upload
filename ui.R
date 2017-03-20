@@ -18,7 +18,7 @@ body <- dashboardBody(
                rel='stylesheet' type='text/css'>"),
           HTML('<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />'),
           tags$style(HTML(readLines("www/custom-style.css")))
-          ),
+        ),
 
         br(),
         fluidRow(
@@ -54,24 +54,11 @@ body <- dashboardBody(
                 )
               )
             ),
-            fluidRow(textOutput("testing_msg")),
+            # fluidRow(textOutput("testing_msg")),
             fluidRow(
               column(2),
               column(8,
-                hidden(
-                  div(
-                    id = "not_a_pdf",
-                    class = "alert-error",
-                    p(style="text-align: center", "The file is not a PDF.")
-                  )
-                ),
-                hidden(
-                  div(
-                    id = "no_text_pdf",
-                    class = "alert-error",
-                    p(style="text-align: center", "The PDF has no embedded text")
-                  )
-                )
+                bsAlert("not_a_pdf_text")
               ),
               column(2)
             ),
@@ -263,8 +250,7 @@ body <- dashboardBody(
                     "* = required field")
                 ),
                 column(3),
-                column(
-                  1,
+                column(1,
                   actionButton(
                     "cancel",
                     label = "Cancel",
@@ -272,8 +258,7 @@ body <- dashboardBody(
                   )
                 ),
                 hidden(div(id = "submit_btn",
-                  column(
-                    1,
+                  column(1,
                     actionButton(
                       "submit",
                       label = "Submit",

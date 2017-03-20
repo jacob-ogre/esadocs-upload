@@ -156,6 +156,16 @@ input.form-contol, input[type=text], [type=text].form-contol {
 .alert-error {
   background-color: #F44336;
   border-radius: 2px;
+  font-size: larger;
+}
+
+.alert-error-alt {
+  background-color: #F44336;
+  border-radius: 2px;
+  color: white;
+  font-size: large;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 .attention {
@@ -181,3 +191,18 @@ input.form-contol, input[type=text], [type=text].form-contol {
 .bar-danger {
   background-color: #E12834;
 }
+
+//
+// .bar-danger:after {
+//   background-image: linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent);
+//   background-size: 40px 40px;
+//   color: #ffffff;
+//   content: 'HELLO';
+//   float: left;
+//   font-size: 12px;
+//   font-weight: bold;
+//   line-height: 23px;
+//   text-align: center;
+//   visibility: visible;
+// }
+
